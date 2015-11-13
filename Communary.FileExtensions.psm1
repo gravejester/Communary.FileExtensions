@@ -35,6 +35,7 @@ function Invoke-FastFind {
             Version: 1.0
         .LINK
             https://communary.wordpress.com/
+            https://github.com/gravejester/Communary.FileExtensions
     #>
     [CmdletBinding()]
     param (
@@ -141,6 +142,7 @@ function Get-DirectoryInfo {
             Version: 1.0
         .LINK
             https://communary.wordpress.com/
+            https://github.com/gravejester/Communary.FileExtensions
     #>
     [CmdletBinding()]
     param (
@@ -195,6 +197,7 @@ function Remove-File {
             Version: 1.0
         .LINK
             https://communary.wordpress.com/
+            https://github.com/gravejester/Communary.FileExtensions
     #>
     [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact='High')]
     param (
@@ -232,6 +235,7 @@ function New-Tempfile {
             Version: 1.0
         .LINK
             https://communary.wordpress.com/
+            https://github.com/gravejester/Communary.FileExtensions
     #>
     try {
         $tmpFile = [System.IO.Path]::GetTempFileName()
@@ -255,6 +259,7 @@ function Get-TempFolder {
             Version: 1.0
         .LINK
             https://communary.wordpress.com/
+            https://github.com/gravejester/Communary.FileExtensions
     #>
     $tmpFolder = [System.IO.Path]::GetTempPath()
     $tmpFolderObject = Get-Item -Path $tmpFolder
@@ -273,6 +278,7 @@ function Get-RandomFileName {
             Version: 1.0
         .LINK
             https://communary.wordpress.com/
+            https://github.com/gravejester/Communary.FileExtensions
     #>
     [System.IO.Path]::GetRandomFileName()
 }
@@ -299,7 +305,8 @@ function Resolve-PathEx {
             Resolve-Path nosuchfile.txt
             Will resolve the full path of the file, even though it doesn't exist.
         .LINK
-            https://gist.github.com/gravejester/a5c8407fcf5fb16a356a
+            https://communary.wordpress.com/
+            https://github.com/gravejester/Communary.FileExtensions
         .NOTES
             Author: Øyvind Kallstad
             Date: 13.11.2014
@@ -559,6 +566,7 @@ function Set-FileAttribute {
             Version: 1.0
         .LINK
             https://communary.wordpress.com/
+            https://github.com/gravejester/Communary.FileExtensions
     #>
     [CmdletBinding(DefaultParameterSetName = 'default')]
     param (
@@ -621,6 +629,7 @@ function Get-FileAttributes {
             Version: 1.0
         .LINK
             https://communary.wordpress.com/
+            https://github.com/gravejester/Communary.FileExtensions
     #>
     [CmdletBinding()]
     param (
