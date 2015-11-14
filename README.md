@@ -6,15 +6,16 @@ A PowerShell module with functions to enhance and simplify the way you work with
 - Invoke-FastFind*
 - Get-DirectoryInfo*
 - Remove-File*
+- Remove-Directory*
 - New-TempFile
 - Get-TempFolder
 - Get-RandomFileName
 - Resolve-PathEx
 - Invoke-Touch
-- Set-FileAttribute*
+- Set-FileAttributes*
 - Get-FileAttributes*
 
-*These functions utilize the Win32 API to give support for long paths.
+*These functions utilize the Win32 API to give support for long paths (up to 32,767 characters).
 
 ##ToDo
 - Lots

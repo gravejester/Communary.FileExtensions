@@ -81,6 +81,7 @@ function Invoke-FastFind {
 
         # Perform recursive search.
         [Parameter()]
+        [Alias('r')]
         [switch] $Recurse,
 
         # Depth of recursive search. Default is null (unlimited recursion).
@@ -215,7 +216,69 @@ function Remove-File {
                 $resolvedPath = (Resolve-Path -Path $thisPath).Path
                 $resolvedPath = $resolvedPath.Replace('Microsoft.PowerShell.Core\FileSystem::','')
                 if ($Force -or $PSCmdlet.ShouldProcess($thisPath,'Delete')) {
-                    [Communary.FileExtensions]::DeleteFile($resolvedPath)
+                    try {
+                        [Communary.FileExtensions]::DeleteFile($resolvedPath)
+                    }
+                    
+                    catch {
+                        Write-Warning "Failed to remove $($resolvedPath): $($_.Exception.Message)"
+                    }
+                }
+            }
+        }
+    }
+}
+
+function Remove-Directory {
+    <#
+        .SYNOPSIS
+            Delete folder(s).
+        .DESCRIPTION
+            Delete one or more directory. This function supports long paths, both local and UNC.
+            Function will fail if directory is not empty.
+        .EXAMPLE
+            Remove-Directory c:\temp\tempfolder
+            Will remove the directory c:\temp\tempfolder after prompting you for confirmation.
+        .EXAMPLE
+            c:\temp\tempfolder | Remove-Directory
+            Will remove the directory c:\temp\tempfolder after prompting you for confirmation.
+        .EXAMPLE
+            Remove-Directory c:\temp\tempfolder -WhatIf
+            Will give you information about what the function would perform if used without the -WhatIf parameter.
+        .EXAMPLE
+            Remove-Directory c:\temp\tempfolder -Force
+            Will remove the directory c:\temp\tempfolder without prompting you for confirmation.
+        .NOTES
+            Author: Øyvind Kallstad
+            Date: 14.11.2015
+            Version: 1.0
+        .LINK
+            https://communary.wordpress.com/
+            https://github.com/gravejester/Communary.FileExtensions
+    #>
+    [CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact='High')]
+    param (
+        [Parameter(Position = 0, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string[]] $Path,
+
+        [Parameter()]
+        [switch] $Force
+    )
+
+    PROCESS {
+        foreach ($thisPath in $Path) {
+            if (Test-Path -Path $thisPath) {
+                $resolvedPath = (Resolve-Path -Path $thisPath).Path
+                $resolvedPath = $resolvedPath.Replace('Microsoft.PowerShell.Core\FileSystem::','')
+                if ($Force -or $PSCmdlet.ShouldProcess($thisPath,'Delete')) {
+                    try {
+                        [Communary.FileExtensions]::DeleteDirectory($resolvedPath)
+                    }
+                    
+                    catch {
+                        Write-Warning "Failed to remove $($resolvedPath): $($_.Exception.Message)"
+                    }
                 }
             }
         }
@@ -554,7 +617,7 @@ function Invoke-Touch {
     }
 }
 
-function Set-FileAttribute {
+function Set-FileAttributes {
     <#
         .SYNOPSIS
             Set file attributes.
@@ -611,7 +674,13 @@ function Set-FileAttribute {
                     }
                 }
                 
-                [Communary.FileExtensions]::AddFileAttributes($resolvedPath, $attributes)
+                try {
+                    [Communary.FileExtensions]::AddFileAttributes($resolvedPath, $attributes)
+                }
+                
+                catch {
+                    Write-Warning "Failed to set attributes for $($resolvedPath): $($_.Exception.Message)"
+                }
             }
         }
     }

@@ -2,7 +2,6 @@ using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -10,7 +9,7 @@ using System.Security;
 
 namespace Communary
 {
-	internal sealed class Win32Native
+    internal sealed class Win32Native
 	{
 		[DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
 		public static extern SafeFindHandle FindFirstFileExW(
@@ -41,6 +40,9 @@ namespace Communary
 		[DllImport("kernel32.dll", SetLastError = true)]
 		[return: MarshalAs(UnmanagedType.Bool)]
 		public static extern bool DeleteFileW([MarshalAs(UnmanagedType.LPWStr)]string lpFileName);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern bool RemoveDirectoryW(string lpPathName);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern bool SetFileAttributesW(
@@ -167,20 +169,34 @@ namespace Communary
 			{
 				prefixedPath = normalPrefix + path;
 			}
-			try
-			{
-				Win32Native.DeleteFileW(prefixedPath);
-			}
-			catch
-			{
-				int hr = Marshal.GetLastWin32Error();
-				if (hr != 2 && hr != 0x12)
-				{
-					throw new Win32Exception(hr);
-					//Console.WriteLine("{0}:  {1}", path, (new Win32Exception(hr)).Message);
-				}
-			}
+
+            bool success = Win32Native.DeleteFileW(prefixedPath);
+            if (!success)
+            {
+                int lastError = Marshal.GetLastWin32Error();
+                throw new Win32Exception(lastError);
+            }
 		}
+
+        public static void DeleteDirectory(string path)
+        {
+            string prefixedPath;
+            if (path.StartsWith(@"\\"))
+            {
+                prefixedPath = path.Replace(@"\\", uncPrefix);
+            }
+            else
+            {
+                prefixedPath = normalPrefix + path;
+            }
+
+            bool success = Win32Native.RemoveDirectoryW(prefixedPath);
+            if (!success)
+            {
+                int lastError = Marshal.GetLastWin32Error();
+                throw new Win32Exception(lastError);
+            }
+        }
 
         public static void AddFileAttributes(string path, FileAttributes fileAttributes)
         {
@@ -194,7 +210,12 @@ namespace Communary
                 prefixedPath = normalPrefix + path;
             }
 
-            Win32Native.SetFileAttributesW(prefixedPath, fileAttributes);
+            bool success = Win32Native.SetFileAttributesW(prefixedPath, fileAttributes);
+            if (!success)
+            {
+                int lastError = Marshal.GetLastWin32Error();
+                throw new Win32Exception(lastError);
+            }
         }
 
         public static uint GetFileAttributes(string path)
