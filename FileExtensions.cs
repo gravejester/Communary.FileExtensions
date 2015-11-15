@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
+using System.Text;
 
 namespace Communary
 {
@@ -51,6 +52,58 @@ namespace Communary
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern uint GetFileAttributesW(string lpFileName);
+                
+        [DllImport("advapi32.dll", SetLastError = true)]
+        public static extern uint GetSecurityInfo(
+            IntPtr hFindFile,
+            SE_OBJECT_TYPE ObjectType,
+            SECURITY_INFORMATION SecurityInfo,
+            out IntPtr pSidOwner,
+            out IntPtr pSidGroup,
+            out IntPtr pDacl,
+            out IntPtr pSacl,
+            out IntPtr pSecurityDescriptor);
+
+        [DllImport("advapi32.dll", CharSet = CharSet.Unicode)]
+        public static extern uint GetNamedSecurityInfoW(
+            string pObjectName,
+            SE_OBJECT_TYPE ObjectType,
+            SECURITY_INFORMATION SecurityInfo,
+            out IntPtr pSidOwner,
+            out IntPtr pSidGroup,
+            out IntPtr pDacl,
+            out IntPtr pSacl,
+            out IntPtr pSecurityDescriptor);
+
+        [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern uint LookupAccountSid(
+            string lpSystemName,
+            IntPtr psid,
+            StringBuilder lpName,
+            ref uint cchName,
+            [Out] StringBuilder lpReferencedDomainName,
+            ref uint cchReferencedDomainName,
+            out uint peUse);
+
+        [DllImport("advapi32", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern bool ConvertSidToStringSid(
+        IntPtr sid,
+        out IntPtr sidString);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr LocalFree(
+            IntPtr handle
+        );
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern IntPtr CreateFileW(
+            [MarshalAs(UnmanagedType.LPWStr)] string filename,
+            [MarshalAs(UnmanagedType.U4)] FileAccess access,
+            [MarshalAs(UnmanagedType.U4)] FileShare share,
+            IntPtr securityAttributes,
+            [MarshalAs(UnmanagedType.U4)] FileMode creationDisposition,
+            [MarshalAs(UnmanagedType.U4)] FileAttributes flagsAndAttributes,
+            IntPtr templateFile);
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
 		public struct WIN32_FIND_DATAW
@@ -89,7 +142,32 @@ namespace Communary
 			FindFirstExCaseSensitive,
 			FindFirstExLargeFetch
 		}
-	}
+
+        public enum SE_OBJECT_TYPE
+        {
+            SE_UNKNOWN_OBJECT_TYPE,
+            SE_FILE_OBJECT,
+            SE_SERVICE,
+            SE_PRINTER,
+            SE_REGISTRY_KEY,
+            SE_LMSHARE,
+            SE_KERNEL_OBJECT,
+            SE_WINDOW_OBJECT,
+            SE_DS_OBJECT,
+            SE_DS_OBJECT_ALL,
+            SE_PROVIDER_DEFINED_OBJECT,
+            SE_WMIGUID_OBJECT,
+            SE_REGISTRY_WOW64_32KEY
+        }
+
+        public enum SECURITY_INFORMATION
+        {
+            OWNER_SECURITY_INFORMATION = 1,     // The owner identifier of the object is being referenced. Right required to query: READ_CONTROL. Right required to set: WRITE_OWNER.
+            GROUP_SECURITY_INFORMATION = 2,     // The primary group identifier of the object is being referenced. Right required to query: READ_CONTROL. Right required to set: WRITE_OWNER.
+            DACL_SECURITY_INFORMATION = 4,      // The DACL of the object is being referenced. Right required to query: READ_CONTROL. Right required to set: WRITE_DAC.
+            SACL_SECURITY_INFORMATION = 8,      // The SACL of the object is being referenced. Right required to query: ACCESS_SYSTEM_SECURITY. Right required to set: ACCESS_SYSTEM_SECURITY.
+        }
+    }
 	
 	[SecurityCritical]
 	internal class SafeFindHandle : SafeHandleZeroOrMinusOneIsInvalid
@@ -231,6 +309,64 @@ namespace Communary
             }
 
             return (Win32Native.GetFileAttributesW(prefixedPath));
+        }
+                
+        public static string GetFileOwner(string path)
+        {
+            
+            string prefixedPath;
+            if (path.StartsWith(@"\\"))
+            {
+                prefixedPath = path.Replace(@"\\", uncPrefix);
+            }
+            else
+            {
+                prefixedPath = normalPrefix + path;
+            }
+
+            IntPtr NA = IntPtr.Zero;
+            IntPtr sidOwner;
+
+            var errorCode = Win32Native.GetNamedSecurityInfoW(prefixedPath, Win32Native.SE_OBJECT_TYPE.SE_FILE_OBJECT, Win32Native.SECURITY_INFORMATION.OWNER_SECURITY_INFORMATION, out sidOwner, out NA, out NA, out NA, out NA);
+            if (errorCode == 0)
+            {
+                const uint bufferLength = 64;
+                StringBuilder fileOwner = new StringBuilder();
+                var accountLength = bufferLength;
+                var domainLength = bufferLength;
+                StringBuilder ownerAccount = new StringBuilder((int)bufferLength);
+                StringBuilder ownerDomain = new StringBuilder((int)bufferLength);
+                uint peUse;
+
+                errorCode = Win32Native.LookupAccountSid(null, sidOwner, ownerAccount, ref accountLength, ownerDomain, ref domainLength, out peUse);
+                if (errorCode != 0)
+                {
+                    fileOwner.Append(ownerDomain);
+                    fileOwner.Append(@"\");
+                    fileOwner.Append(ownerAccount);
+                    return fileOwner.ToString();
+                }
+                else
+                {
+                    IntPtr sidString = IntPtr.Zero;
+                    if (Win32Native.ConvertSidToStringSid(sidOwner, out sidString))
+                    {
+                        //string account = new System.Security.Principal.SecurityIdentifier(sidOwner).Translate(typeof(System.Security.Principal.NTAccount)).ToString();
+                        //Console.WriteLine(account);
+                        return Marshal.PtrToStringAuto(sidString);
+                    }
+                    else
+                    {
+                        int lastError = Marshal.GetLastWin32Error();
+                        throw new Win32Exception(lastError);
+                    }
+                }
+            }
+            else
+            {
+                int lastError = Marshal.GetLastWin32Error();
+                throw new Win32Exception(lastError);
+            }
         }
 	
 		public static List<FileInformation> FastFind(string path, string searchPattern, bool getFile, bool getDirectory, bool recurse, int? depth, bool parallel, bool suppressErrors, bool largeFetch, bool getHidden, bool getSystem, bool getReadOnly, bool getCompressed, bool getArchive, bool getReparsePoint, string filterMode)
@@ -475,5 +611,13 @@ namespace Communary
 			public DateTime LastAccessTime;
 			public DateTime LastWriteTime;
 		}
+
+        [Serializable]
+        public class SecurityInformation
+        {
+            public string Path;
+            public string Owner;
+            public string Access;
+        }
 	}
 }

@@ -99,11 +99,12 @@ function Invoke-FastFind {
     }
 
     foreach ($thisPath in $Path) {
-        if (Test-Path -Path $thisPath) {
+        #if (Test-Path -Path $thisPath) {
             
             # adds support for relative paths
-            $resolvedPath = (Resolve-Path -Path $thisPath).Path
-            $resolvedPath = $resolvedPath.Replace('Microsoft.PowerShell.Core\FileSystem::','')
+            #$resolvedPath = (Resolve-Path -Path $thisPath).Path
+            #$resolvedPath = $resolvedPath.Replace('Microsoft.PowerShell.Core\FileSystem::','')
+            $resolvedPath = $thisPath
 
             # handle a quirk where \ at the end of a non-UNC, non-root path failes
             if (-not ($resolvedPath.ToString().StartsWith('\\'))) {
@@ -116,10 +117,10 @@ function Invoke-FastFind {
 
             # call FastFind to perform search
             [Communary.FileExtensions]::FastFind($resolvedPath, $Filter, $File, $Directory, $Recurse, $Depth, $true, $true, $LargeFetch, $Hidden, $System, $ReadOnly, $Compressed, $Archive, $ReparsePoint, $AttributeFilterMode)
-        }
-        else {
-            Write-Warning "$thisPath - Invalid path"
-        }
+        #}
+        #else {
+        #    Write-Warning "$thisPath - Invalid path"
+        #}
     }    
 }
 
@@ -212,17 +213,13 @@ function Remove-File {
 
     PROCESS {
         foreach ($thisPath in $Path) {
-            if (Test-Path -Path $thisPath) {
-                $resolvedPath = (Resolve-Path -Path $thisPath).Path
-                $resolvedPath = $resolvedPath.Replace('Microsoft.PowerShell.Core\FileSystem::','')
-                if ($Force -or $PSCmdlet.ShouldProcess($thisPath,'Delete')) {
-                    try {
-                        [Communary.FileExtensions]::DeleteFile($resolvedPath)
-                    }
+            if ($Force -or $PSCmdlet.ShouldProcess($thisPath,'Delete')) {
+                try {
+                    [Communary.FileExtensions]::DeleteFile($thisPath)
+                }
                     
-                    catch {
-                        Write-Warning "Failed to remove $($resolvedPath): $($_.Exception.Message)"
-                    }
+                catch {
+                    Write-Warning "Failed to remove $($thisPath): $($_.Exception.Message)"
                 }
             }
         }
@@ -268,17 +265,13 @@ function Remove-Directory {
 
     PROCESS {
         foreach ($thisPath in $Path) {
-            if (Test-Path -Path $thisPath) {
-                $resolvedPath = (Resolve-Path -Path $thisPath).Path
-                $resolvedPath = $resolvedPath.Replace('Microsoft.PowerShell.Core\FileSystem::','')
-                if ($Force -or $PSCmdlet.ShouldProcess($thisPath,'Delete')) {
-                    try {
-                        [Communary.FileExtensions]::DeleteDirectory($resolvedPath)
-                    }
+            if ($Force -or $PSCmdlet.ShouldProcess($thisPath,'Delete')) {
+                try {
+                    [Communary.FileExtensions]::DeleteDirectory($thisPath)
+                }
                     
-                    catch {
-                        Write-Warning "Failed to remove $($resolvedPath): $($_.Exception.Message)"
-                    }
+                catch {
+                    Write-Warning "Failed to remove $($thisPath): $($_.Exception.Message)"
                 }
             }
         }
@@ -654,33 +647,28 @@ function Set-FileAttributes {
     )
 
     PROCESS {
-        foreach ($thisPath in $Path) {
-            if (Test-Path -Path $thisPath) {
-                $resolvedPath = (Resolve-Path -Path $thisPath).Path
-                $resolvedPath = $resolvedPath.Replace('Microsoft.PowerShell.Core\FileSystem::','')
+        foreach ($thisPath in $Path) {   
+            if ($Normal) {
+                $attributes = [System.IO.FileAttributes]::Normal
+            }
                 
-                if ($Normal) {
-                    $attributes = [System.IO.FileAttributes]::Normal
+            else {
+                $attributesToAdd = @()
+                if ($Archive) {$attributesToAdd += [System.IO.FileAttributes]::Archive}
+                if ($Hidden) {$attributesToAdd += [System.IO.FileAttributes]::Hidden}
+                if ($ReadOnly) {$attributesToAdd += [System.IO.FileAttributes]::ReadOnly}
+                if ($System) {$attributesToAdd += [System.IO.FileAttributes]::System}
+                foreach ($thisAttribute in $attributesToAdd) {
+                    $attributes = $attributes -bor $thisAttribute
                 }
+            }
                 
-                else {
-                    $attributesToAdd = @()
-                    if ($Archive) {$attributesToAdd += [System.IO.FileAttributes]::Archive}
-                    if ($Hidden) {$attributesToAdd += [System.IO.FileAttributes]::Hidden}
-                    if ($ReadOnly) {$attributesToAdd += [System.IO.FileAttributes]::ReadOnly}
-                    if ($System) {$attributesToAdd += [System.IO.FileAttributes]::System}
-                    foreach ($thisAttribute in $attributesToAdd) {
-                        $attributes = $attributes -bor $thisAttribute
-                    }
-                }
+            try {
+                [Communary.FileExtensions]::AddFileAttributes($thisPath, $attributes)
+            }
                 
-                try {
-                    [Communary.FileExtensions]::AddFileAttributes($resolvedPath, $attributes)
-                }
-                
-                catch {
-                    Write-Warning "Failed to set attributes for $($resolvedPath): $($_.Exception.Message)"
-                }
+            catch {
+                Write-Warning "Failed to set attributes for $($thisPath): $($_.Exception.Message)"
             }
         }
     }
@@ -709,15 +697,98 @@ function Get-FileAttributes {
 
     PROCESS {
         foreach ($thisPath in $Path) {
-            if (Test-Path -Path $thisPath) {
-                $resolvedPath = (Resolve-Path -Path $thisPath).Path
-                $resolvedPath = $resolvedPath.Replace('Microsoft.PowerShell.Core\FileSystem::','')
-                [System.IO.FileAttributes]$attributes = [Communary.FileExtensions]::GetFileAttributes($resolvedPath)
+            try {
+                [System.IO.FileAttributes]$attributes = [Communary.FileExtensions]::GetFileAttributes($thisPath)
                 Write-Output $attributes
+            }
+            catch {
+                Write-Warning "Failed to get file attributes for $($thisPath): $($_.Exception.Message)"
             }
         }
     }
 }
+
+function ConvertTo-UNCPath {
+    <#
+        .SYNOPSIS
+            Convert a path to UNC path
+        .DESCRIPTION
+            Convert a path to UNC path
+        .NOTES
+            Author: Øyvind Kallstad
+            Date: 26.10.2015
+            Version: 1.0
+        .INPUTS
+            System.String
+        .OUTPUTS
+            System.String
+        .LINK
+            https://communary.wordpress.com/
+            https://github.com/gravejester/Communary.FileExtensions
+    #>
+    [CmdletBinding()]
+    param (
+        [Parameter(Position = 2, ValueFromPipeline, ValueFromPipelineByPropertyName)]
+        [ValidateNotNullOrEmpty()]
+        [string] $Path,
+
+        [Parameter(Position = 1)]
+        [ValidateNotNullOrEmpty()]
+        [string] $ComputerName
+    )
+
+    $pathRoot = [System.IO.Path]::GetPathRoot($Path)
+    Write-Output ("\\$($ComputerName)$(($Path).Replace($pathRoot, "\$($Path[0])$\"))")
+}
+
+function Get-FileOwner {
+    [CmdletBinding()]
+    param (
+        [Parameter(Position = 1, ValueFromPipeline = $true, ValueFromPipelinebyPropertyname = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string[]] $Path
+    )
+
+    PROCESS {
+        foreach ($thisPath in $Path) {
+            try {
+                $fileOwner = [Communary.FileExtensions]::GetFileOwner($thisPath)
+                Write-Output $fileOwner
+            }
+            catch {
+                Write-Warning "Failed to get file owner for $($thisPath): $($_.Exception.Message)"
+            }
+        }
+    }
+}
+
+function Test-Exist {
+    [CmdletBinding()]
+    param (
+        [Parameter(Position = 1, ValueFromPipeline = $true, ValueFromPipelinebyPropertyname = $true)]
+        [string[]] $Path
+    )
+
+    PROCESS {
+        foreach ($thisPath in $Path) {
+            if ($thisPath) {
+                $pathSplit = $thisPath.Split('\', [System.StringSplitOptions]::RemoveEmptyEntries)
+                $filter = $pathSplit[-1]
+                $searchPath = $pathSplit[0..($pathSplit.Count - 2)] -join '\'
+                if ([bool](Invoke-FastFind -Path $searchPath -Filter $filter)) {
+                    Write-Output $true
+                }
+                else {
+                    Write-Output $false
+                }
+            }
+            else {
+                Write-Output $false
+            }
+        }
+    }
+}
+
 
 Set-Alias -Name 'touch' -Value 'Invoke-Touch' -Force
 Set-Alias -Name 'ff' -Value 'Invoke-FastFind' -Force
