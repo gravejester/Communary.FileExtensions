@@ -742,6 +742,19 @@ function ConvertTo-UNCPath {
 }
 
 function Get-FileOwner {
+    <#
+        .SYNOPSIS
+            Get the owner of a file or a folder.
+        .DESCRIPTION
+            Get the owner of a file or a folder.. Supports large paths.
+        .NOTES
+            Author: Øyvind Kallstad
+            Date: 15.11.2015
+            Version: 1.0
+        .LINK
+            https://communary.wordpress.com/
+            https://github.com/gravejester/Communary.FileExtensions
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Position = 1, ValueFromPipeline = $true, ValueFromPipelinebyPropertyname = $true)]
@@ -763,6 +776,19 @@ function Get-FileOwner {
 }
 
 function Test-Exist {
+    <#
+        .SYNOPSIS
+            Test if a file or folder exist.
+        .DESCRIPTION
+            Test if a file or folder exist. Supports large paths.
+        .NOTES
+            Author: Øyvind Kallstad
+            Date: 15.11.2015
+            Version: 1.0
+        .LINK
+            https://communary.wordpress.com/
+            https://github.com/gravejester/Communary.FileExtensions
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Position = 1, ValueFromPipeline = $true, ValueFromPipelinebyPropertyname = $true)]
@@ -790,13 +816,35 @@ function Test-Exist {
 }
 
 function Get-LastLines {
+    <#
+        .SYNOPSIS
+            Reads the last lines of a file.
+        .DESCRIPTION
+            Reads the last lines of a file.
+        .EXAMPLE
+            Get-LastLines -Path $pathToFile -Lines 1
+            Get the last line of the file.
+        .EXAMPLE
+            Get-LastLines -Path $pathToFile -Lines 10
+            Get the 10 last lines of the file.
+        .EXAMPLE
+            $pathToFile | last 1
+            Get the last line of the file (using the alias 'last').
+        .NOTES
+            Author: Øyvind Kallstad
+            Date: 15.11.2015
+            Version: 1.0
+        .LINK
+            https://communary.wordpress.com/
+            https://github.com/gravejester/Communary.FileExtensions
+    #>
     [CmdletBinding()]
     param (
-        [Parameter(Position = 1, ValueFromPipeline = $true, ValueFromPipelinebyPropertyname = $true)]
+        [Parameter(Position = 2, ValueFromPipeline = $true, ValueFromPipelinebyPropertyname = $true)]
         [ValidateNotNullOrEmpty()]
         [string] $Path,
 
-        [Parameter(Position = 2)]
+        [Parameter(Position = 1)]
         [ValidateRange(1,[int]::MaxValue)]
         [int] $Lines = 1
     )
@@ -808,3 +856,4 @@ function Get-LastLines {
 Set-Alias -Name 'touch' -Value 'Invoke-Touch' -Force
 Set-Alias -Name 'ff' -Value 'Invoke-FastFind' -Force
 Set-Alias -Name 'du' -Value 'Get-DirectoryInfo' -Force
+Set-Alias -Name 'last' -Value 'Get-LastLines' -Force
