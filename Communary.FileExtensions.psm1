@@ -789,6 +789,21 @@ function Test-Exist {
     }
 }
 
+function Get-LastLines {
+    [CmdletBinding()]
+    param (
+        [Parameter(Position = 1, ValueFromPipeline = $true, ValueFromPipelinebyPropertyname = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string] $Path,
+
+        [Parameter(Position = 2)]
+        [ValidateRange(1,[int]::MaxValue)]
+        [int] $Lines = 1
+    )
+
+    Write-Output ([Communary.FileExtensions]::ReadLastLines($Path, $Lines))
+}
+
 
 Set-Alias -Name 'touch' -Value 'Invoke-Touch' -Force
 Set-Alias -Name 'ff' -Value 'Invoke-FastFind' -Force

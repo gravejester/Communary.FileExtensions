@@ -1,5 +1,6 @@
 using Microsoft.Win32.SafeHandles;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -309,6 +310,23 @@ namespace Communary
             }
 
             return (Win32Native.GetFileAttributesW(prefixedPath));
+        }
+
+        public static ArrayList ReadLastLines(string path, int last)
+        {
+            ArrayList output = new ArrayList();
+            int count = 0;
+            foreach (var line in File.ReadLines(path).Reverse())
+            {
+                count++;
+                output.Add(line);
+                if (count == last)
+                {
+                    break;
+                }
+            }
+            output.Reverse();
+            return output;
         }
                 
         public static string GetFileOwner(string path)

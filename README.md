@@ -19,6 +19,7 @@ A PowerShell module with functions to enhance and simplify the way you work with
 - ConvertTo-UNCPath
 - Get-FileOwner*
 - Test-Exist*
+- Get-LastLines
 
 *These functions utilize the Win32 API to give support for long paths (up to 32,767 characters).
 
