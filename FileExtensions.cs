@@ -106,6 +106,11 @@ namespace Communary
             [MarshalAs(UnmanagedType.U4)] FileAttributes flagsAndAttributes,
             IntPtr templateFile);
 
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern uint GetCurrentDirectoryW(
+            uint nBufferLength,
+            [Out] StringBuilder lpBuffer);
+
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
 		public struct WIN32_FIND_DATAW
 		{
@@ -379,6 +384,36 @@ namespace Communary
                         throw new Win32Exception(lastError);
                     }
                 }
+            }
+            else
+            {
+                int lastError = Marshal.GetLastWin32Error();
+                throw new Win32Exception(lastError);
+            }
+        }
+
+        public static string GetCurrentDirectory()
+        {
+            uint buffer = 1;
+            StringBuilder currentDirectory = new StringBuilder((int)buffer);
+            uint returnValue = Win32Native.GetCurrentDirectoryW(buffer, currentDirectory);
+            if (returnValue > 0)
+            {
+                if ((int)returnValue > buffer)
+                {
+                    buffer = returnValue;
+                    currentDirectory = new StringBuilder((int)buffer);
+                    returnValue = Win32Native.GetCurrentDirectoryW(buffer, currentDirectory);
+
+                    if (returnValue == 0)
+                    {
+                        int lastError = Marshal.GetLastWin32Error();
+                        throw new Win32Exception(lastError);
+                    }
+
+                    return currentDirectory.ToString();
+                }
+                return currentDirectory.ToString();
             }
             else
             {
