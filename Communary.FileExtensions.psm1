@@ -852,6 +852,39 @@ function Get-LastLines {
     Write-Output ([Communary.FileExtensions]::ReadLastLines($Path, $Lines))
 }
 
+function Test-FolderIsEmpty {
+    <#
+        .SYNOPSIS
+            Test if a folder is empty or not.
+        .DESCRIPTION
+            Test if a folder is empty or not.
+        .NOTES
+            Author: Øyvind Kallstad
+            Date: 16.11.2015
+            Version: 1.0
+        .LINK
+            https://communary.wordpress.com/
+            https://github.com/gravejester/Communary.FileExtensions
+    #>
+    [CmdletBinding()]
+    param (
+        [Parameter(Position = 1, ValueFromPipeline = $true, ValueFromPipelinebyPropertyname = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string] $Path
+    )
+
+    PROCESS {
+        foreach ($thisPath in $Path) {
+            if ([bool](Invoke-FastFind -Path $thisPath -Recurse)) {
+                Write-Output $false
+            }
+            else {
+                Write-Output $true
+            }
+        }
+    }
+}
+
 
 Set-Alias -Name 'touch' -Value 'Invoke-Touch' -Force
 Set-Alias -Name 'ff' -Value 'Invoke-FastFind' -Force
