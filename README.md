@@ -14,8 +14,8 @@ A PowerShell module with functions to enhance and simplify the way you work with
 - Get-RandomFileName
 - Resolve-PathEx
 - Invoke-Touch
-- Set-FileAttributes*
-- Get-FileAttributes*
+- Set-FileAttribute*
+- Get-FileAttribute*
 - ConvertTo-UNCPath
 - Get-FileOwner*
 - Test-Exist*
