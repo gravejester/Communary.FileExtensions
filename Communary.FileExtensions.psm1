@@ -448,7 +448,7 @@ function Invoke-Touch {
             Date: 13.11.2014
             Version: 1.0
     #>
-    [CmdletBinding(ConfirmImpact = 'Low',SupportsShouldProcess, DefaultParameterSetName = 'UserDateTime')]
+    [CmdletBinding(ConfirmImpact = 'Low',SupportsShouldProcess = $true, DefaultParameterSetName = 'UserDateTime')]
     param (
         # Filename and/or path.
         [Parameter(Position = 0, ValueFromPipeline, ValueFromPipelinebyPropertyName)]
@@ -610,7 +610,7 @@ function Invoke-Touch {
     }
 }
 
-function Set-FileAttributes {
+function Set-FileAttribute {
     <#
         .SYNOPSIS
             Set file attributes.
@@ -674,7 +674,7 @@ function Set-FileAttributes {
     }
 }
 
-function Get-FileAttributes {
+function Get-FileAttribute {
     <#
         .SYNOPSIS
             Get file attributes.
@@ -815,7 +815,7 @@ function Test-Exist {
     }
 }
 
-function Get-LastLines {
+function Get-LastLine {
     <#
         .SYNOPSIS
             Reads the last lines of a file.
@@ -884,29 +884,6 @@ function Test-FolderIsEmpty {
         }
     }
 }
-
-function Get-CurrentDirectory {
-    <#
-        .SYNOPSIS
-            Get the full path of the current directory.
-        .DESCRIPTION
-            Get the full path of the current directory.
-        .NOTES
-            Author: Øyvind Kallstad
-            Date: 16.11.2015
-            Version: 1.0
-        .LINK
-            https://communary.wordpress.com/
-            https://github.com/gravejester/Communary.FileExtensions
-    #>
-    try {
-        Write-Output ([Communary.FileExtensions]::GetCurrentDirectory())
-    }
-    catch {
-        Write-Warning $_.Exception.Message
-    }
-}
-
 
 Set-Alias -Name 'touch' -Value 'Invoke-Touch' -Force
 Set-Alias -Name 'ff' -Value 'Invoke-FastFind' -Force
