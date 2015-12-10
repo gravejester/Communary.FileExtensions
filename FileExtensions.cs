@@ -47,6 +47,9 @@ namespace Communary
         public static extern bool RemoveDirectoryW(string lpPathName);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern bool MoveFileW(string lpExistingFileName, string lpNewFileName);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern bool SetFileAttributesW(
              string lpFileName,
              [MarshalAs(UnmanagedType.U4)] FileAttributes dwFileAttributes);
@@ -270,6 +273,26 @@ namespace Communary
             }
 
             bool success = Win32Native.RemoveDirectoryW(prefixedPath);
+            if (!success)
+            {
+                int lastError = Marshal.GetLastWin32Error();
+                throw new Win32Exception(lastError);
+            }
+        }
+
+        public static void DeleteDirectoryRecurse(string path)
+        {
+            string prefixedPath;
+            if (path.StartsWith(@"\\"))
+            {
+                prefixedPath = path.Replace(@"\\", uncPrefix);
+            }
+            else
+            {
+                prefixedPath = normalPrefix + path;
+            }
+
+            bool success = Win32Native.MoveFileW(prefixedPath, null);
             if (!success)
             {
                 int lastError = Marshal.GetLastWin32Error();

@@ -278,6 +278,26 @@ function Remove-Directory {
     }
 }
 
+function Remove-DirectoryRecurse {
+    [CmdletBinding()]
+    param (
+        [Parameter(Position = 0, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string[]] $Path
+    )
+    
+    PROCESS {
+        foreach ($thisPath in $Path) {
+            try {
+                [Communary.FileExtensions]::DeleteDirectoryRecurse($thisPath)
+            }
+            catch {
+                Write-Warning "Failed to remove $($thisPath): $($_.Exception.Message)"
+            }
+        }
+    }
+}
+
 function New-Tempfile {
     <#
         .SYNOPSIS
