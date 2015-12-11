@@ -73,7 +73,7 @@ function Invoke-FastFind {
 
         [Parameter()]
         [switch] $ReparsePoint,
-        
+
         # Choose the filter mode for attribute filtering. Valid choices are 'Include', 'Exclude' and 'Strict'. Default is 'Include'.
         [Parameter()]
         [ValidateSet('Include','Exclude','Strict')]
@@ -100,7 +100,7 @@ function Invoke-FastFind {
 
     foreach ($thisPath in $Path) {
         #if (Test-Path -Path $thisPath) {
-            
+
             # adds support for relative paths
             #$resolvedPath = (Resolve-Path -Path $thisPath).Path
             #$resolvedPath = $resolvedPath.Replace('Microsoft.PowerShell.Core\FileSystem::','')
@@ -121,7 +121,7 @@ function Invoke-FastFind {
         #else {
         #    Write-Warning "$thisPath - Invalid path"
         #}
-    }    
+    }
 }
 
 function Get-DirectoryInfo {
@@ -164,7 +164,7 @@ function Get-DirectoryInfo {
             $totalSize = $totalSize + $item.FileSize
         }
         [long]$sizeOnDisk = (($totalSize + $sectorSize - 1) / $sectorSize) * $sectorSize
-    
+
         Write-Output (,([PSCustomObject] @{
             Path = $thisPath
             NumberOfDirectories = $numberOfFolders
@@ -196,7 +196,8 @@ function Remove-File {
         .NOTES
             Author: Øyvind Kallstad
             Date: 13.11.2015
-            Version: 1.0
+            Version: 1.1
+                Update 11.12.2015: Will now also delete Read-Only files.
         .LINK
             https://communary.wordpress.com/
             https://github.com/gravejester/Communary.FileExtensions
@@ -215,9 +216,12 @@ function Remove-File {
         foreach ($thisPath in $Path) {
             if ($Force -or $PSCmdlet.ShouldProcess($thisPath,'Delete')) {
                 try {
+                    if ((Get-FileAttribute -Path $thisPath) -like '*ReadOnly*') {
+                        Set-FileAttribute -Path $thisPath -Normal
+                    }
                     [Communary.FileExtensions]::DeleteFile($thisPath)
                 }
-                    
+
                 catch {
                     Write-Warning "Failed to remove $($thisPath): $($_.Exception.Message)"
                 }
@@ -269,7 +273,7 @@ function Remove-Directory {
                 try {
                     [Communary.FileExtensions]::DeleteDirectory($thisPath)
                 }
-                    
+
                 catch {
                     Write-Warning "Failed to remove $($thisPath): $($_.Exception.Message)"
                 }
@@ -285,15 +289,23 @@ function Remove-DirectoryRecurse {
         [ValidateNotNullOrEmpty()]
         [string[]] $Path
     )
-    
+
     PROCESS {
         foreach ($thisPath in $Path) {
+            #remove all files
+            Invoke-FastFind -Path $thisPath -Filter '*' -File -Recurse | Remove-File -Force
+
+            # remove all folders
+            $folders = New-Object System.Collections.ArrayList
             try {
-                [Communary.FileExtensions]::DeleteDirectoryRecurse($thisPath)
+                $folders.AddRange((Invoke-FastFind -Path $thisPath -Filter '*' -Directory -Recurse))
+                $folders.Reverse()
+                $folders | Select-Object -ExpandProperty Path | Remove-Directory -Force
             }
-            catch {
-                Write-Warning "Failed to remove $($thisPath): $($_.Exception.Message)"
-            }
+            catch {}
+
+            # remove the top folder
+            Remove-Directory -Path $thisPath -Force
         }
     }
 }
@@ -393,13 +405,13 @@ function Resolve-PathEx {
         [Parameter(Position = 0, ValueFromPipeline, ValueFromPipelinebyPropertyName)]
         [string[]] $Path = '.\'
     )
- 
+
     PROCESS{
         foreach ($thisPath in $Path) {
             try {
                 # first try to resolve using the whole path
                 [array]$resolvedPath += (Resolve-Path -Path $thisPath -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Path)
- 
+
                 # if that didn't work, split to get the path only
                 if ([string]::IsNullOrEmpty($resolvedPath)) {
                     $pathOnly = Split-Path $thisPath
@@ -433,10 +445,10 @@ function Resolve-PathEx {
                             Path = $item
                             Exists = $exists
                         }))
-                    }   
+                    }
                 }
             }
- 
+
             catch {
                 Write-Warning $_.Exception.Message
             }
@@ -473,43 +485,43 @@ function Invoke-Touch {
         # Filename and/or path.
         [Parameter(Position = 0, ValueFromPipeline, ValueFromPipelinebyPropertyName)]
         [string[]] $Path,
- 
+
         # File to use as a timestamp reference.
         [Parameter(ParameterSetName = 'ReferenceDateTime')]
         [Alias('r')]
         [string] $Reference,
- 
+
         # Timestamp offset in seconds.
         [Parameter()]
         [Alias('B','F')]
         [int] $OffsetSeconds = 0,
- 
+
         # Used to override the timestamp. If omitted the current date and time will be used.
         [Parameter(ParameterSetName = 'UserDateTime')]
         [Alias('t','d')]
         [string] $DateTime,
- 
+
         # Update Last Access Time.
         [Parameter()]
         [Alias('a')]
         [switch] $AccessTime,
- 
+
         # Update Last Write Time.
         [Parameter()]
         [Alias('m','w')]
         [switch] $WriteTime,
- 
+
         # Switch to override the basic functionality of creating a new file if it don't exist already.
         [Parameter()]
         [Alias('c')]
         [switch] $DoNotCreateNewFile,
- 
+
         [Parameter()]
         [switch] $PassThru
     )
- 
+
     BEGIN {
-        
+
         try {
             # use timestamp from a reference file
             if (-not([string]::IsNullOrEmpty($Reference))) {
@@ -523,13 +535,13 @@ function Invoke-Touch {
                     Write-Warning "$Reference not found!"
                 }
             }
- 
+
             # use timestamp from user input
             elseif (-not([string]::IsNullOrEmpty($DateTime))) {
                 $userDateTime = [DateTime]::Parse($DateTime,[CultureInfo]::CurrentCulture,[System.Globalization.DateTimeStyles]::NoCurrentDateDefault)
                 Write-Verbose "Using timestamp from user input: $DateTime (Parsed: $($userDateTime))"
             }
- 
+
             # use timestamp from current date/time
             else {
                 $currentDateTime = (Get-Date).AddSeconds($OffsetSeconds)
@@ -542,16 +554,16 @@ function Invoke-Touch {
             Write-Warning $_.Exception.Message
         }
     }
- 
+
     PROCESS {
         foreach ($thisPath in $Path) {
-            
+
             try {
                 $thisPathResolved = Resolve-PathEx -Path $thisPath
- 
+
                 foreach ($p in $thisPathResolved.Path) {
                     Write-Verbose "Resolved path: $p"
- 
+
                     # if file is not found, and it's ok to create a new file, create it!
                     if (-not(Test-Path $p)) {
                         if ($DoNotCreateNewFile) {
@@ -564,14 +576,14 @@ function Invoke-Touch {
                             }
                         }
                     }
- 
+
                     # get fileinfo object
                     $fileObject = Get-ChildItem $p -ErrorAction SilentlyContinue
 
                     if (-not([string]::IsNullOrEmpty($fileObject))) {
                         # handle date & time if datetime parameter is used
                         if (-not([string]::IsNullOrEmpty($DateTime))) {
- 
+
                             # if parsed datetime object contains time
                             if ([bool]$userDateTime.TimeOfDay.Ticks) {
                                 Write-Verbose 'Found time in datetime'
@@ -582,7 +594,7 @@ function Invoke-Touch {
                                 Write-Verbose 'Did not find time in datetime - using time from file'
                                 $userTime = $fileObject.LastAccessTime.ToLongTimeString()
                             }
- 
+
                             # if parsed datetime object contains date
                             if ([bool]$userDateTime.Date.Ticks) {
                                 Write-Verbose 'Found date in datetime'
@@ -594,35 +606,35 @@ function Invoke-Touch {
                                 Write-Verbose 'Did not find date in datetime - using date from file'
                                 $userDate = $fileObject.LastAccessTime.ToShortDateString()
                             }
- 
+
                             # parse the new datetime
                             $parsedNewDateTime = [datetime]::Parse("$userDate $userTime")
- 
+
                             # add offset and save to the appropriate variables
                             $newLastAccessTime = $parsedNewDateTime.AddSeconds($OffsetSeconds)
                             $newLastWriteTime = $parsedNewDateTime.AddSeconds($OffsetSeconds)
                         }
                     }
- 
+
                     if ($PSCmdlet.ShouldProcess($p, 'Update Timestamp')) {
                         # if neither -AccessTime nor -WriteTime is used, update both Last Access Time and Last Write Time
                         if ((-not($AccessTime)) -and (-not($WriteTime))) {
                             $fileObject.LastAccessTime = $newLastAccessTime
                             $fileObject.LastWriteTime = $newLastWriteTime
                         }
- 
+
                         else {
                             if ($AccessTime) { $fileObject.LastAccessTime = $newLastAccessTime }
                             if ($WriteTime) { $fileObject.LastWriteTime = $newLastWriteTime }
                         }
                     }
                 }
- 
+
                 if ($PassThru) {
                     Write-Output (Get-ChildItem $p)
                 }
             }
- 
+
             catch {
                 Write-Warning $_.Exception.Message
             }
@@ -667,11 +679,11 @@ function Set-FileAttribute {
     )
 
     PROCESS {
-        foreach ($thisPath in $Path) {   
+        foreach ($thisPath in $Path) {
             if ($Normal) {
                 $attributes = [System.IO.FileAttributes]::Normal
             }
-                
+
             else {
                 $attributesToAdd = @()
                 if ($Archive) {$attributesToAdd += [System.IO.FileAttributes]::Archive}
@@ -682,11 +694,11 @@ function Set-FileAttribute {
                     $attributes = $attributes -bor $thisAttribute
                 }
             }
-                
+
             try {
                 [Communary.FileExtensions]::AddFileAttributes($thisPath, $attributes)
             }
-                
+
             catch {
                 Write-Warning "Failed to set attributes for $($thisPath): $($_.Exception.Message)"
             }

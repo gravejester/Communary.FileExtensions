@@ -9,6 +9,7 @@ A PowerShell module with functions to enhance and simplify the way you work with
 - Get-DirectoryInfo*
 - Remove-File*
 - Remove-Directory*
+- Remove-DirectoryRecurse*
 - New-TempFile
 - Get-TempFolder
 - Get-RandomFileName
