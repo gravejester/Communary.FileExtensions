@@ -282,33 +282,33 @@ function Remove-Directory {
     }
 }
 
-function Remove-DirectoryRecurse {
-    [CmdletBinding()]
-    param (
-        [Parameter(Position = 0, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
-        [ValidateNotNullOrEmpty()]
-        [string[]] $Path
-    )
+#function Remove-DirectoryRecurse {
+#    [CmdletBinding()]
+#    param (
+#        [Parameter(Position = 0, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+#        [ValidateNotNullOrEmpty()]
+#        [string[]] $Path
+#    )
+#
+#    PROCESS {
+#        foreach ($thisPath in $Path) {
+#            #remove all files
+#            Invoke-FastFind -Path $thisPath -Filter '*' -File -Recurse | Remove-File -Force
+#
+#            # remove all folders
+#            $folders = New-Object System.Collections.ArrayList
+#            try {
+#                $folders.AddRange((Invoke-FastFind -Path $thisPath -Filter '*' -Directory -Recurse))
+#                $folders.Reverse()
+#                $folders | Select-Object -ExpandProperty Path | Remove-Directory -Force
+#            }
+#            catch {}
 
-    PROCESS {
-        foreach ($thisPath in $Path) {
-            #remove all files
-            Invoke-FastFind -Path $thisPath -Filter '*' -File -Recurse | Remove-File -Force
-
-            # remove all folders
-            $folders = New-Object System.Collections.ArrayList
-            try {
-                $folders.AddRange((Invoke-FastFind -Path $thisPath -Filter '*' -Directory -Recurse))
-                $folders.Reverse()
-                $folders | Select-Object -ExpandProperty Path | Remove-Directory -Force
-            }
-            catch {}
-
-            # remove the top folder
-            Remove-Directory -Path $thisPath -Force
-        }
-    }
-}
+#            # remove the top folder
+#            Remove-Directory -Path $thisPath -Force
+#        }
+#    }
+#}
 
 function New-Tempfile {
     <#
